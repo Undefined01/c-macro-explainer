@@ -9,7 +9,9 @@ use nom::{
     IResult, Parser,
 };
 use std::{
-    ascii::escape_default, cell::RefCell, collections::{HashMap, HashSet}
+    ascii::escape_default,
+    cell::RefCell,
+    collections::{HashMap, HashSet},
 };
 
 use crate::parser::{
@@ -37,11 +39,17 @@ impl MacroPreprocessor {
         self.macros.remove(name);
     }
 
-    fn expand_object_macro(&self, expended_macros: &mut HashSet<String>, name: &str) -> Option<String> {
+    fn expand_object_macro(
+        &self,
+        expended_macros: &mut HashSet<String>,
+        name: &str,
+    ) -> Option<String> {
         if expended_macros.contains(name) {
+            println!("Though {} is an object-like macro, its expension is prevented by the self-reference rule", name);
             return None;
         }
         if let Some(Macro::Object { body }) = self.macros.get(name) {
+            println!("Expanding object-like macro {} to `{}`", name, body);
             expended_macros.insert(name.to_string());
             Some(body.clone())
         } else {
@@ -61,42 +69,83 @@ impl MacroPreprocessor {
         }
     }
 
-    fn expand_function_macro(&self, expended_macros: &mut HashSet<String>, macro_name: &str, macro_args: Vec<&str>) -> Option<String> {
+    fn expand_function_macro(
+        &self,
+        expended_macros: &mut HashSet<String>,
+        macro_name: &str,
+        macro_args: Vec<&str>,
+    ) -> Option<String> {
         if expended_macros.contains(macro_name) {
+            println!("Though {} is a function-like macro, its expension is prevented by the self-reference rule", macro_name);
             return None;
         }
         if let Some(Macro::Function { params, body }) = self.macros.get(macro_name) {
-            let args = if body.contains("##") {
-                macro_args.iter().map(|s| s.to_string()).collect()
+            let ordered_args = if body.contains("##") {
+                println!(
+                    "The body of {} contains ##, so the pre-expansion is skipped",
+                    macro_name
+                );
+                params
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, param)| {
+                        if param == "..." {
+                            (
+                                "__VA_ARGS__".to_string(),
+                                macro_args.iter().skip(idx).join(", "),
+                            )
+                        } else {
+                            (param.to_string(), macro_args[idx].to_string())
+                        }
+                    })
+                    .collect::<Vec<(_, _)>>()
             } else {
-                macro_args.iter().map(|s| self.process(s)).collect()
+                params
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, param)| {
+                        if param == "..." {
+                            (
+                                "__VA_ARGS__".to_string(),
+                                macro_args
+                                    .iter()
+                                    .skip(idx)
+                                    .map(|arg| self.process(arg))
+                                    .join(", "),
+                            )
+                        } else {
+                            (param.to_string(), self.process(macro_args[idx]))
+                        }
+                    })
+                    .collect::<Vec<(_, _)>>()
             };
-            eprintln!("pre-expanded: {:?}", args);
+            let args = ordered_args.iter().cloned().collect::<HashMap<_, _>>();
 
             expended_macros.insert(macro_name.to_string());
             let mut result = String::new();
             let mut input = body.as_str();
             while !input.is_empty() {
                 if let Ok((remaining, name)) = parse_stringify(input) {
-                    let arg = Self::get_argument(params, &args, name);
+                    let arg = args.get(name).map(|a| a.as_str()).unwrap_or(name);
+                    result.push('"');
                     result.push_str(
                         &String::from_utf8(arg.bytes().flat_map(escape_default).collect()).unwrap(),
                     );
+                    result.push('"');
                     input = remaining;
                     continue;
                 }
                 if let Ok((remaining, (lhs, rhs))) = parse_concatenation(input) {
-                    let larg = Self::get_argument(params, &args, lhs);
-                    let rarg = Self::get_argument(params, &args, rhs);
+                    let larg = args.get(lhs).map(|a| a.as_str()).unwrap_or(lhs);
+                    let rarg = args.get(rhs).map(|a| a.as_str()).unwrap_or(rhs);
                     result.push_str(&larg);
                     result.push_str(&rarg);
                     input = remaining;
                     continue;
                 }
                 if let Ok((remaining, name)) = identifier(input) {
-                    let arg = Self::get_argument(params, &args, name);
+                    let arg = args.get(name).map(|a| a.as_str()).unwrap_or(name);
                     result.push_str(&arg);
-                    eprintln!("arg {} -> {}", name, arg);
                     input = remaining;
                     continue;
                 }
@@ -104,6 +153,16 @@ impl MacroPreprocessor {
                 result.push_str(&input[..1]);
                 input = &input[1..];
             }
+
+            println!(
+                "Expanding function-like macro {} with args {{{}}}. The result is `{}`",
+                macro_name,
+                ordered_args.iter()
+                    .map(|(param, arg)| format!("{}=>`{}`", param, arg))
+                    .join(", "),
+                result
+            );
+
             Some(result)
         } else {
             None
@@ -267,7 +326,7 @@ impl MacroPreprocessor {
     }
 }
 
-fn preprocess(input: &str) -> String {
+pub fn preprocess(input: &str) -> String {
     let mut preprocessor = MacroPreprocessor::new();
     preprocessor.process_mut(input)
 }
@@ -322,6 +381,7 @@ mod tests {
         let expanded_code = standardize(expanded_code);
         let reference = get_reference_result(source_code).unwrap();
         let reference = standardize(reference);
+        println!("Reference: {}", reference);
         assert_eq!(
             expanded_code, reference,
             "Source Code:\n{}\n\nExpanded Code:\n{}\n\nReference:\n{}",
@@ -351,6 +411,23 @@ int max_value = IDENTICAL(MAX)(10, 20);
 
     #[test]
     fn concatenation() {
+        test(
+            r#"
+#define PRIMITIVE_CONCAT(x, ...) x ## __VA_ARGS__
+#define CONCAT(x, ...) PRIMITIVE_CONCAT(x, __VA_ARGS__)
+#define A xxx
+#define B yyy
+PRIMITIVE_CONCAT(A, B)
+PRIMITIVE_CONCAT(A, B, A)
+CONCAT(A, B)
+CONCAT(A, B, A)
+
+#define CONCAT3(x, y, z) x ## y z
+#define AB xy
+CONCAT3(A, B, A)
+"#,
+        );
+
         test(
             r#"
 #define IIF(cond) IIF_ ## cond
