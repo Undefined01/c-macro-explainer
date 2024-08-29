@@ -1,16 +1,7 @@
 use itertools::Itertools;
-use nom::{
-    branch::alt,
-    bytes::complete::{tag, take_while, take_while1},
-    character::complete::{alpha1, alphanumeric1, multispace0, multispace1},
-    combinator::{map, opt, recognize, value},
-    multi::{many0_count, separated_list0},
-    sequence::{delimited, pair, preceded, terminated, tuple},
-    IResult, Parser,
-};
+use nom::Parser;
 use std::{
     ascii::escape_default,
-    cell::RefCell,
     collections::{HashMap, HashSet},
 };
 
@@ -157,7 +148,8 @@ impl MacroPreprocessor {
             println!(
                 "Expanding function-like macro {} with args {{{}}}. The result is `{}`",
                 macro_name,
-                ordered_args.iter()
+                ordered_args
+                    .iter()
                     .map(|(param, arg)| format!("{}=>`{}`", param, arg))
                     .join(", "),
                 result

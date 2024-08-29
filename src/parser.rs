@@ -1,8 +1,8 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_until, take_while, take_while1},
+    bytes::complete::{tag, take_until},
     character::complete::{alpha1, alphanumeric1, multispace0, multispace1},
-    combinator::{map, opt, recognize, value},
+    combinator::{opt, recognize, value},
     multi::{many0_count, separated_list0},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult, Parser,
@@ -42,7 +42,7 @@ pub fn parse_define<'a>(input: &'a str) -> IResult<&'a str, (&'a str, Macro)> {
                     eatten.push(ch);
                 }
             } else if is_new_line && ch == ' ' {
-                continue
+                continue;
             } else if ch == '\n' && !is_escaped {
                 return IResult::Ok((&input[i..], eatten.trim().to_string()));
             } else {
@@ -73,12 +73,7 @@ pub fn parse_define<'a>(input: &'a str) -> IResult<&'a str, (&'a str, Macro)> {
                 },
             )
         } else {
-            (
-                name,
-                Macro::Object {
-                    body,
-                },
-            )
+            (name, Macro::Object { body })
         }
     })
     .parse(input)
@@ -109,13 +104,7 @@ pub fn parse_concatenation(input: &str) -> IResult<&str, (&str, &str)> {
 pub fn parse_comment(input: &str) -> IResult<&str, ()> {
     alt((
         value((), tuple((tag("//"), take_until("\n")))),
-        value(
-            (),
-            tuple((
-                tag("/*"),
-                take_until("*/"),
-            )),
-        ),
+        value((), tuple((tag("/*"), take_until("*/")))),
     ))
     .parse(input)
 }
