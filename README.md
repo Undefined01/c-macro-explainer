@@ -8,7 +8,7 @@ Have you ever wondered how the following macro can check whether a macro is defi
 IF(0)(true, false)      // expands to false
 IF(1)(true, false)      // expands to true
 #define TRUE 1
-IF(TRUE)(true, false)   // expands to false
+IF(TRUE)(true, false)   // expands to true
 IF(xxx)(true, false)    // xxx is undefined, it expands to false
 ```
 
@@ -17,7 +17,7 @@ IF(xxx)(true, false)    // xxx is undefined, it expands to false
 - Explains the expansion of C-like macros step by step.
 - Helps in debugging and understanding the behavior of macros in C/C++ code.
 
-This tool is guaranteed to be fully compatible with GCC or Clang preprocessing rules. It does not support other preprocessor directives like #include, #if, #ifdef, etc. It is a simplified version to help understand the basics of macro expansion. If you find any discrepancies, please open an issue.
+This tool is not guaranteed to be fully compatible with GCC or Clang preprocessing rules. It does not support other preprocessor directives like #include, #if, #ifdef, etc. It is a simplified version to help understand the basics of macro expansion. If you find any discrepancies, please open an issue.
 
 ### Usage
 
@@ -68,7 +68,9 @@ CHECK(PROBE(~))
 #define IIF(c) PRIMITIVE_CAT(IIF_, c)
 #define IIF_0(t, ...) __VA_ARGS__
 #define IIF_1(t, ...) t
-#define BOOL(x) NOT(NOT(x))
+#define NOT(x) CHECK(PRIMITIVE_CAT(NOT_, x))
+#define NOT_1 PROBE(~)
+#define BOOL(x) NOT(x)
 #define IF(c) IIF(BOOL(c))
 
 // Expands to false
@@ -93,25 +95,61 @@ Expanding function-like macro PROBE with args {x=>`~`}. The result is `~, 1,`
 Expanding function-like macro CHECK with args {__VA_ARGS__=>`~, 1,`}. The result is `CHECK_N(~, 1,, 0,)`
 Expanding function-like macro CHECK_N with args {x=>`~`, n=>`1`, __VA_ARGS__=>`, 0, `}. The result is `1`
 Expanding function-like macro IF with args {c=>`0`}. The result is `IIF(BOOL(0))`
-Expanding function-like macro BOOL with args {x=>`0`}. The result is `NOT(NOT(0))`
-Expanding function-like macro IIF with args {c=>`NOT(NOT(0))`}. The result is `PRIMITIVE_CAT(IIF_, NOT(NOT(0)))`
+Expanding function-like macro BOOL with args {x=>`0`}. The result is `NOT(0)`
+Expanding function-like macro NOT with args {x=>`0`}. The result is `CHECK(PRIMITIVE_CAT(NOT_, 0))`
 The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
-Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`NOT(NOT(0))`}. The result is `IIF_NOT(NOT(0))`
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`NOT_`, __VA_ARGS__=>`0`}. The result is `NOT_0`
+Expanding function-like macro CHECK with args {__VA_ARGS__=>`NOT_0`}. The result is `CHECK_N(NOT_0, 0,)`
+Expanding function-like macro CHECK_N with args {x=>`NOT_0`, n=>`0`, __VA_ARGS__=>``}. The result is `0`
+Expanding function-like macro IIF with args {c=>`0`}. The result is `PRIMITIVE_CAT(IIF_, 0)`
+The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`0`}. The result is `IIF_0`
+Expanding function-like macro IIF_0 with args {t=>`true`, __VA_ARGS__=>`false`}. The result is `false`
 Expanding function-like macro IF with args {c=>`1`}. The result is `IIF(BOOL(1))`
-Expanding function-like macro BOOL with args {x=>`1`}. The result is `NOT(NOT(1))`
-Expanding function-like macro IIF with args {c=>`NOT(NOT(1))`}. The result is `PRIMITIVE_CAT(IIF_, NOT(NOT(1)))`
+Expanding function-like macro BOOL with args {x=>`1`}. The result is `NOT(1)`
+Expanding function-like macro NOT with args {x=>`1`}. The result is `CHECK(PRIMITIVE_CAT(NOT_, 1))`
 The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
-Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`NOT(NOT(1))`}. The result is `IIF_NOT(NOT(1))`
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`NOT_`, __VA_ARGS__=>`1`}. The result is `NOT_1`
+Expanding object-like macro NOT_1 to `PROBE(~)`
+Expanding function-like macro PROBE with args {x=>`~`}. The result is `~, 1,`
+Expanding function-like macro CHECK with args {__VA_ARGS__=>`~, 1,`}. The result is `CHECK_N(~, 1,, 0,)`
+Expanding function-like macro CHECK_N with args {x=>`~`, n=>`1`, __VA_ARGS__=>`, 0, `}. The result is `1`
+Expanding function-like macro IIF with args {c=>`1`}. The result is `PRIMITIVE_CAT(IIF_, 1)`
+The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`1`}. The result is `IIF_1`
+Expanding function-like macro IIF_1 with args {t=>`true`, __VA_ARGS__=>`false`}. The result is `true`
+Expanding object-like macro TRUE to `1`
 Expanding function-like macro IF with args {c=>`1`}. The result is `IIF(BOOL(1))`
-Expanding function-like macro BOOL with args {x=>`1`}. The result is `NOT(NOT(1))`
-Expanding function-like macro IIF with args {c=>`NOT(NOT(1))`}. The result is `PRIMITIVE_CAT(IIF_, NOT(NOT(1)))`
+Expanding function-like macro BOOL with args {x=>`1`}. The result is `NOT(1)`
+Expanding function-like macro NOT with args {x=>`1`}. The result is `CHECK(PRIMITIVE_CAT(NOT_, 1))`
 The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
-Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`NOT(NOT(1))`}. The result is `IIF_NOT(NOT(1))`
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`NOT_`, __VA_ARGS__=>`1`}. The result is `NOT_1`
+Expanding object-like macro NOT_1 to `PROBE(~)`
+Expanding function-like macro PROBE with args {x=>`~`}. The result is `~, 1,`
+Expanding function-like macro CHECK with args {__VA_ARGS__=>`~, 1,`}. The result is `CHECK_N(~, 1,, 0,)`
+Expanding function-like macro CHECK_N with args {x=>`~`, n=>`1`, __VA_ARGS__=>`, 0, `}. The result is `1`
+Expanding function-like macro IIF with args {c=>`1`}. The result is `PRIMITIVE_CAT(IIF_, 1)`
+The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`1`}. The result is `IIF_1`
+Expanding function-like macro IIF_1 with args {t=>`true`, __VA_ARGS__=>`false`}. The result is `true`
 Expanding function-like macro IF with args {c=>`xxx`}. The result is `IIF(BOOL(xxx))`
-Expanding function-like macro BOOL with args {x=>`xxx`}. The result is `NOT(NOT(xxx))`
-Expanding function-like macro IIF with args {c=>`NOT(NOT(xxx))`}. The result is `PRIMITIVE_CAT(IIF_, NOT(NOT(xxx)))`
+Expanding function-like macro BOOL with args {x=>`xxx`}. The result is `NOT(xxx)`
+Expanding function-like macro NOT with args {x=>`xxx`}. The result is `CHECK(PRIMITIVE_CAT(NOT_, xxx))`
 The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
-Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`NOT(NOT(xxx))`}. The result is `IIF_NOT(NOT(xxx))`
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`NOT_`, __VA_ARGS__=>`xxx`}. The result is `NOT_xxx`
+Expanding function-like macro CHECK with args {__VA_ARGS__=>`NOT_xxx`}. The result is `CHECK_N(NOT_xxx, 0,)`
+Expanding function-like macro CHECK_N with args {x=>`NOT_xxx`, n=>`0`, __VA_ARGS__=>``}. The result is `0`
+Expanding function-like macro IIF with args {c=>`0`}. The result is `PRIMITIVE_CAT(IIF_, 0)`
+The body of PRIMITIVE_CAT contains ##, so the pre-expansion is skipped
+Expanding function-like macro PRIMITIVE_CAT with args {a=>`IIF_`, __VA_ARGS__=>`0`}. The result is `IIF_0`
+Expanding function-like macro IIF_0 with args {t=>`true`, __VA_ARGS__=>`false`}. The result is `false`
+Preprocessed code:
+0
+1
+false
+true
+true
+false
 ```
 </details>
 
@@ -177,18 +215,18 @@ Here are some brief explanations of the macros expansion rules.
 
     ```c
     #define EPERM EPERM
-    EPERM
+    EPERM   // EPERM
 
     #define foo (4 + foo)
-    foo
+    foo     // (4 + foo)
 
     #define x (4 + y)
     #define y (2 * x)
-    x
-    y
+    x       // (4 + (2 * x))
+    y       // (2 * (4 + y))
 
     #define A(x) x
-    A(A)
+    A(A)    // A
     ```
     </details>
 
